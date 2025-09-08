@@ -17,27 +17,12 @@ config = read_config('config.yaml')
 
 #Import Excel File
 riskData = pd.read_excel('risks.xlsx',sheet_name = 'Testing Tab',skiprows=7) #replace with og file
-
 print(riskData)
 
 grouped = riskData.groupby("L3 ID")
 
-
 riskJSON = []
 controlJSON = []
-
-'''
-for l3id, group in grouped:
-    riskJSON[l3id] = group.to_dict(orient="records")
-    
-
-print(json.dumps(riskJSON, indent=2))
-'''
-
-#print(json.dumps(result, indent=2))
-
-
-#print(riskData)
 
 #Risk json block
 new_riskstest_block = {
@@ -138,7 +123,6 @@ start_time = time.time()
 errors = {}
 
 modelid = ''
-#sid = 'sid-752D32E1-55F0-4273-836F-CC2D21E7898E'
 sid = ''
 
 riskList = []
@@ -146,10 +130,38 @@ riskList = []
 for l3name, grp in grouped:
     currentL3 = False
     updateCompleted = False
+    riskAvailable = False
+    riskCheckList = []
     
     modelid = grp["Model ID"].iloc[0]
     sid= grp["L3 ID"].iloc[0]
     model_json = spm.get_model_json(modelid)
+    
+    
+    tasks = filter_childshapes(model_json, filter_list=['Task','CollapsedSubprocess'])
+    for index, task in enumerate(tasks):
+        
+        if task.get('resourceId') == sid:
+            metaName = task.get('properties',{}).get('name','')
+            metaRiskAttr = task.get('properties',{}).get('meta-riskstest',{}).get('items',())
+            totalCountAttr = task.get('properties',{}).get('meta-riskstest',{}).get('totalCount',())
+            
+            
+            
+            if metaRiskAttr == "": 
+                #No risk associated currently for this L3
+                riskAvailable = False
+                print("Risk Empty")
+            else:
+                riskAvailable = True
+                print(f"Risk already available for L3: {metaName}")
+                for item in metaRiskAttr:    
+                    print(item["riskname"])
+                    riskCheckList.append(item["riskname"])
+                riskList = metaRiskAttr #Assigning already existing risks to list and then appending
+                
+                
+            #print(f"Name: {metaName}, Risks: {metaRiskAttr}")
     
     riskCount = len(grp)
     
@@ -158,7 +170,7 @@ for l3name, grp in grouped:
         print(riskGrp)
         firstRiskRow = riskGrp.iloc[0]
         controlCount = len(riskGrp)
-        print(controlCount)
+        print(f"Controls: {controlCount}")
         #print(firstRiskRow)
         if firstRiskRow["Control Glossary ID"] == "":
             print("Control Count less than 1")
@@ -169,7 +181,7 @@ for l3name, grp in grouped:
                 })
             
         else:
-            print("Controls present")
+            print("Controls given in excel")
             controlJSON = ({
                 "totalCount": controlCount,
                 "items": [
@@ -187,34 +199,37 @@ for l3name, grp in grouped:
                   }for _, row in riskGrp.iterrows()]
                 })
         
-        print(controlJSON)
-        print(f"Initial Risklist: {riskList}")
-        riskList.append({
-            "meta-extentofdamagewithoutcontro": firstRiskRow["Extent of damage (without controls)"],
-            "riskname": "",
-            "meta-riskprobabilitywithoutcontr": firstRiskRow["Risk Probability (without controls)"],
-            "controls": controlJSON,
-            "attachments": "",
-            "itemHref": "/glossary/"+firstRiskRow["RiskName Glossary ID"],
-            "meta-extentofdamageresidualrisk": firstRiskRow["Extent of damage (residual risk)"],
-            "meta-cause": firstRiskRow["Cause"],
-            "meta-consequence": firstRiskRow["Consequence"],
-            "description": firstRiskRow["Risk Description"],
-            "meta-riskprobabilityresidualrisk": firstRiskRow["Risk Probability (residual risk)"],
-            "id": ""
-            })
+        #print(controlJSON)
+        #print(f"Initial Risklist: {riskList}")
         
-        print(f"risklist at 1: {riskList}")
+        
+        if firstRiskRow["RiskName"] in riskCheckList:
+            print("Risk already available, hence skipped.")
+        else:
+            riskList.append({
+                "meta-extentofdamagewithoutcontro": firstRiskRow["Extent of damage (without controls)"],
+                "riskname": "",
+                "meta-riskprobabilitywithoutcontr": firstRiskRow["Risk Probability (without controls)"],
+                "controls": controlJSON,
+                "attachments": "",
+                "itemHref": "/glossary/"+firstRiskRow["RiskName Glossary ID"],
+                "meta-extentofdamageresidualrisk": firstRiskRow["Extent of damage (residual risk)"],
+                "meta-cause": firstRiskRow["Cause"],
+                "meta-consequence": firstRiskRow["Consequence"],
+                "description": firstRiskRow["Risk Description"],
+                "meta-riskprobabilityresidualrisk": firstRiskRow["Risk Probability (residual risk)"],
+                "id": ""
+                })
         
     
-        print("Appending results of group")
+        print(f"Appending results for L3: {metaName}")
     riskJSON = ({
         "totalCount":riskCount,
         "items":riskList
             
         })
     
-    print(json.dumps(riskJSON, indent=2))
+    #print(json.dumps(riskJSON, indent=2))
     riskList = []
 
     modified_data = insert_after_key_globally(model_json,sid, target_key_to_find, new_key_for_block, riskJSON)
@@ -226,7 +241,6 @@ for l3name, grp in grouped:
        print(f"Risks updated successfully for the model {modelid}: \n\n*********************************")
 
 #Update the model - POST
-
 
 logger.info('------ RESULTS -----')
 logger.info('Total Runtime: ' + str(round((time.time() - start_time) / 60 , 2)) + ' minutes')
