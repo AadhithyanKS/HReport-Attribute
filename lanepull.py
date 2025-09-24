@@ -28,17 +28,21 @@ errors = {}
 #modelID = "233ed51104c644bdb30386efc1764fba"
 #modelID = "4bcc575382384620abeafcb71ebe5dfb"
 sid = "sid-E4BC3858-C004-4A0D-8FF8-7F98B2E560E5"
-#directory_id = '29091c0b38ea43be9a3927a0adf5f1cd'
+directory_id = '29091c0b38ea43be9a3927a0adf5f1cd'
+directory_id = 'c35b7e56eabe47f48384ed3f9e23140e'
+#directory_id = 'fcc88674e6ca4095afb69497a9555b25'
 #directory_id = '78f2128fc1c14a08a538813820180380'
 #directory_id = '573eb91eb1484f1494658ec5f3c3583b'
 #directory_id = 'f4f058d866b84c59a36edb8ea1443705'
-directory_id = '573eb91eb1484f1494658ec5f3c3583b' #S2P
+#directory_id = '573eb91eb1484f1494658ec5f3c3583b' #S2P
+#directory_id = 'b4b7df24d34847bf935a3c960bb04e72' #o2c
+#directory_id = 'c2c0f38f0eb14650b12c35580fb681d1'
 
 #model_json = spm.get_model_json(modelID)
-addtnlParticipantDict = {}
+elementDict = {}
 taskDict = {}
 connectorDataDictionary = []
-df = pd.DataFrame({"e2eName":[],"L3":[],"Swimlane":[],"Addntl Participant":'',"Resource ID":'',"IncorrectMappings":[]})
+df = pd.DataFrame({"e2eName":[],"L3":[],"Swimlane":[],"Addntl Participant":'',"Resource ID":'',"IT":'',"Fiori":'',"L3 UID":'',"IncorrectMappings":[]})
 
 #df.loc[len(df)] = ["Hello","Analyst","Manager"]
 #print(df)
@@ -60,7 +64,7 @@ def pullConnectorData(model_json):
         connectorOIDElementFound = False
         
         if connector.get('outgoing',{}):
-            print(f"Scanning connector: {connector['resourceId']}")
+            #print(f"Scanning connector: {connector['resourceId']}")
             
             for task in tasks:
                 if task['resourceId'] == connector.get('outgoing',{})[0]['resourceId']:
@@ -76,24 +80,25 @@ def pullConnectorData(model_json):
                         connectorOIDElementFound = True
                         break
                     
-    print(f"connector dict: {connectorDataDictionary}")
+    #print(f"connector dict: {connectorDataDictionary}")
                     
      #----------------------------------------#
 
 #If additional participants are available in the flow
-def createAddtnlParticipantDict(model_json):
-    addtnlParticipants = filter_childshapes(model_json, filter_list="processparticipant")   
+def createTargetElementDict(model_json,element, elementJSONName):
+    elementDict = {}
+    filteredElementJSON = filter_childshapes(model_json, filter_list=elementJSONName)   
     tasks = filter_childshapes(model_json, filter_list=['Task','CollapsedSubprocess'])
 
-    if len(addtnlParticipants)>0:
+    if len(filteredElementJSON)>0:
         incorrectMappingAddtnlParticipants = 0
         addtnlParticipantsAvailable = True
         connectors = filter_childshapes(model_json, filter_list="Association_Undirected")
-        for addtnl in addtnlParticipants:
+        for elementDetail in filteredElementJSON:
             oidList = []
             
-            rid = addtnl.get('resourceId','')
-            oids = addtnl.get('outgoing',{})
+            rid = elementDetail.get('resourceId','')
+            oids = elementDetail.get('outgoing',{})
             
             
             #check if the outgoing id is present (to ensure line is made from icon to L3)
@@ -113,39 +118,41 @@ def createAddtnlParticipantDict(model_json):
                             
                     oidList.append(connectorDict)   
                 
-                addtnlParticipantDict[rid] = {
-                    "Additional Participant Name": addtnl.get('properties',{}).get('name',''),
+                elementDict[rid] = {
+                    "Element Name": elementDetail.get('properties',{}).get('name',''),
                     "Outgoing ID": oidList
                         }
+                
+                
                 
                 #for multiple outgoing lines from a single addntl participant
                     
             else:
+                connectorDict = {}
                 
                 for item in connectorDataDictionary:
                     if item['OID-Element'] == rid:
                         connectorDict = {"Connector ID": item['Connector ID'],"OID-Task":item['OID-Element']}
                         break
                 oidList.append(connectorDict)
-                addtnlParticipantDict[rid] = {
-                    "Additional Participant Name": addtnl.get('properties',{}).get('name',''),
+                elementDict[rid] = {
+                    "Element Name": elementDetail.get('properties',{}).get('name',''),
                     "Outgoing ID": oidList
                         }
                        
                 incorrectMappingAddtnlParticipants+=1    
-        print(json.dumps(addtnlParticipantDict,indent=2))      
-        return incorrectMappingAddtnlParticipants
+        #print(json.dumps(elementDict,indent=2)) 
+        print(f"Dict: {elementDict}")
+    return elementDict
 
 
 
 
 #Lane to task pull
-def pullLaneData(model_json,e2eName,incorrectMappings):
+def pullLaneData(model_json,e2eName,elementDict):
     
     
     lanedata = filter_childshapes(model_json, filter_list=['Lane'])
-    
-
     
     for lane in lanedata:
         
@@ -159,30 +166,67 @@ def pullLaneData(model_json,e2eName,incorrectMappings):
         for task in tasks:
             #print(task.get('properties',{}).get('name',''))
             
-            addtnlPartyName = []
+            elementName = []
             
             #printing Addntl participants
             
-            for addtnlParty in addtnlParticipantDict:
-                outgoingIDDict = addtnlParticipantDict[addtnlParty]['Outgoing ID']
+            print(f"Element dict: {elementDict}")
+            if elementDict is None:
+                continue
+                
+            
+            for elementDetail in elementDict:
+                
+                
+                outgoingIDDict = elementDict[elementDetail]['Outgoing ID']
+                
                 for oidEntry in outgoingIDDict:
                     if oidEntry:
+                        print(f"OID:{oidEntry['OID-Task']}, L3 RID: {task.get('resourceId','')}")
                         #check whether that connector oid matches with the L3 rid
                         if (oidEntry['OID-Task'] == task.get('resourceId','')):
-                            addtnlPartyName.append(addtnlParticipantDict[addtnlParty]['Additional Participant Name'])
-            
+                            elementName.append(elementDict[elementDetail]['Element Name'])
+                            print(f"L3: {task.get('properties',{}).get('name','')},{elementName}")
             #for taskDetails in taskDict:
                 
             
             #print(f"Associated Additional participant is:{addtnlPartyName}")
             #print(f"Df length:{len(df)}")
-            l4ITSystem = task.get('properties',{}).get('meta-itsystem','')
-            l4Fiori = task.get('properties',{}).get('meta-fioriapptransaction','')
-            df.loc[len(df)] = [e2eName,task.get('properties',{}).get('name',''),lane.get('properties',{}).get('name',''),addtnlPartyName,task.get('resourceId',''),incorrectMappings]
+            '''
+            #----------------Fetching Glossary values like Fiori, IT system etc--------------------#
+            glossaryLink=task.get('glossaryLinks',{}).get('name','')
+            glossaryDetails = spm.get_endpoint(glossaryLink[0][1:]+'/info') 
+           
+            print(glossaryDetails)
+            #IT system pull
+            if glossaryDetails:
+                if(len(glossaryDetails.get('metaDataValues', {}).get('meta-itsystem', {}))>0):
+                   itSystemObject = glossaryDetails.get('metaDataValues', {}).get('meta-itsystem', {})
+                   itsystemArray = []
+                   itsystemString = ''
+                   for x in range(len(itSystemObject)):
+                       itsystemArray.append(glossaryDetails.get('metaDataValues', {}).get('meta-itsystem', {})[x].get('title',''))
+                   itsystemString = ','.join(itsystemArray)
+                else:
+                    itsystemString = ''
+                    
+                if(len(glossaryDetails.get('metaDataValues', {}).get('meta-fioriapptransaction', {}))>0):
+                   fioriObject = glossaryDetails.get('metaDataValues', {}).get('meta-fioriapptransaction', {})
+                   fioriArray = []
+                   fioriString = ''
+                   for x in range(len(fioriObject)):
+                       fioriArray.append(glossaryDetails.get('metaDataValues', {}).get('meta-fioriapptransaction', {})[x].get('title',''))
+                   fioriString = ','.join(fioriArray)
+                else:
+                    fioriString = ''  
+            '''
+            itsystemString = ''
+            fioriString = ''
+            df.loc[len(df)] = [e2eName,task.get('properties',{}).get('name',''),lane.get('properties',{}).get('name',''),elementName,task.get('resourceId',''),itsystemString,fioriString,task.get('properties',{}).get('meta-l3uid',''),'']
             
         #print("------------------\n")
 
-#createAddtnlParticipantDict()
+#createTargetElementDict()
 #pullLaneData()
 
 def traverse_model_data(directory_id, level_id, hierarchy_id):
@@ -197,16 +241,11 @@ def traverse_model_data(directory_id, level_id, hierarchy_id):
         with open("directoryData.txt", "w") as file:
             file.write(json.dumps(directory_content,indent=2))
         #logger.debug(directory_content)
-        iterator = 0
+        
         for entry in directory_content:
             
             if(entry['rel'] == 'dir') or (entry['rel'] == 'mod'):
-                if hierarchy_id == 0:
-                    iterator = iterator + 1
-                    tmp_id = ''
-                else:
-                    iterator = iterator + 1
-                    tmp_id = ''
+                
                   
                 #DIRECTORY DATA
                 if entry['rel'] == 'dir':
@@ -238,10 +277,18 @@ def traverse_model_data(directory_id, level_id, hierarchy_id):
                     model_json = spm.get_model_json(entry['href'])
                     print(e2eName)
                     #print(model_json)
+                    
+                    addtnlParticipantsAvailable = False
+                    element = 'Addntl'
+                    elementJSONName = 'processparticipant'
+                    
+                    #elementJSONName = 'DataObject'
+                    
+                    #elementJSONName = 'TextAnnotation'
                      
                     pullConnectorData(model_json)
-                    incorrectMappings = createAddtnlParticipantDict(model_json)
-                    pullLaneData(model_json,e2eName,incorrectMappings)
+                    elementDict = createTargetElementDict(model_json,element, elementJSONName)
+                    pullLaneData(model_json,e2eName,elementDict)
 
     except Exception as err:
         pass
@@ -252,9 +299,9 @@ def traverse_model_data(directory_id, level_id, hierarchy_id):
 
 
 traverse_model_data(directory_id, level_id=0, hierarchy_id=0)
-df.to_excel("L3TaskAddtnlData - S2P.xlsx") 
+df.to_excel("L3TaskAddtnlData - RnM.xlsx") 
 end_time = time.time()
-logger.debug(f"Time taken: {end_time-start_time}")
+logger.info('Total Runtime: ' + str(round((time.time() - start_time) / 60 , 2)) + ' minutes')
 logger.debug(df)
 #print(incorrectMappingAddtnlParticipants)
 #print(json.dumps(data[1],indent=2))
