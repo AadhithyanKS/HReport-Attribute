@@ -30,6 +30,7 @@ config = read_config('config.yaml')
 #root_directory_id = '97eb35609b6545d48e5b972ca68002fc' #manufacturing Operations 
 #root_directory_id = '841916c8c87d4f1a8ab47723fa579b20' #mdm
 #root_directory_id = 'b4b7df24d34847bf935a3c960bb04e72' #o2c
+root_directory_id = 'da9b35bd49c44f23b3025f6260f05c97' #S2P L4s
 #root_directory_id = '573eb91eb1484f1494658ec5f3c3583b' #sandbox
 #root_directory_id = 'dbb2064d9f0547aa947f5b9447c5cec6' #p2p
 #root_directory_id = '3a47cac6b21e4fd193b3af281bcae868' #r2r
@@ -38,16 +39,16 @@ config = read_config('config.yaml')
 #root_directory_id = '3fe14e53b2724f058542e073bd68a22f' #SC 
 #root_directory_id = '2ba73b52e57a4993a1f40b4c82282596' #Trading2
 #root_directory_id = 'd7d73caea37c4d18a0c986bd569f348e' # supp 
-root_directory_id = '29091c0b38ea43be9a3927a0adf5f1cd' #ETE full
+#root_directory_id = '29091c0b38ea43be9a3927a0adf5f1cd' #ETE full
 #root_directory_id = '2c011a10241844fcb54d591b278d5dc7' # hydro carbon - 
 #root_directory_id = '2fffdc51904c4749bb148e8639b960e6' # non hydro = 
 #root_directory_id = '9bab68fdd2684008b4a5a93accbb032a' #PLM sandbox
 #root_directory_id = '573eb91eb1484f1494658ec5f3c3583b' #test for security roles
-
+#root_directory_id = 'aa54faa6b46840768311ac8b877c8d83' #Aadhi Sandbox
 # =============================================================================
 # Custom Code Logic
 # =============================================================================
-
+directoryName = ''
 
 def add_directory_content(directory_id, level_id, hierarchy_id):
     model_count = 0
@@ -82,11 +83,13 @@ def add_directory_content(directory_id, level_id, hierarchy_id):
                   
                 #DIRECTORY DATA
                 if entry['rel'] == 'dir':
+                    global directoryName
                     directoryName = entry['rep']['name']
                     if directoryName == 'Human Capital Management' or directoryName == 'Master Data Management' or directoryName == 'Plan to Perform (P2P)' or directoryName == 'L4 Process Flows':
                        logger.debug(directoryName) #activelogger
                        continue
-                    report_data.append({'ETE Group (Signavio Process Flow)':  html.unescape(entry['rep']['name']),
+                    report_data.append({'Process Area': directoryName,
+                                        'ETE Group (Signavio Process Flow)':  html.unescape(entry['rep']['name']),
                                         'Source Industry L4': 'Directory',
                                         'Source Industry L3': '',
                                         'Industry Category L3': '',
@@ -96,13 +99,15 @@ def add_directory_content(directory_id, level_id, hierarchy_id):
                                         'Industry Category L1': '',
                                         'Source Industry L0':'',
                                         'Industry Category L0': '',
-                                        'Description':'',
+                                        'L3 Description':'',
                                         'Source Industry L4 Taxonomy': '',
                                         'Source Industry L3 Taxonomy': '',
                                         'Source Industry L4 Practice': '',
                                         'Source Industry L3 Practice': '',
                                         'IT System': '',
+                                        'L4 IT System': '',
                                         'Fiori App/Transaction':'',
+                                        'L4 Fiori App/Transaction': '',
                                         'EM Capabilities': '',
                                         'E2E Scenario Owner': '', 
                                         'Value Chain Function': '',
@@ -114,7 +119,7 @@ def add_directory_content(directory_id, level_id, hierarchy_id):
                                         'Program Category L0': '',
                                         'Task Type':'',
                                         'L4 Task Type':'',
-                                        'Comp':'',
+                                        'Security Composite Roles':'',
                                         'Signavio ID': entry['href'],
                                         'Signavio Link':'',
                                         'Model Description':''})
@@ -136,6 +141,9 @@ def add_directory_content(directory_id, level_id, hierarchy_id):
                     #                    'Signavio ID': entry['href']}) 
                     e2eName = html.unescape(entry['rep']['name'])
                     e2eLink= html.unescape(entry['href'])
+                    if e2eName.startswith('PS-'):
+                        print("HYC variants - skip")
+                        continue
                     
                     #TASK DATA
                     model_json = spm.get_model_json(entry['href'])
@@ -218,7 +226,7 @@ def add_directory_content(directory_id, level_id, hierarchy_id):
                             securitycompositeroles = ''
                             
                             if not compositeroles:
-                                print("No associated composite roles")
+                                #print("No associated composite roles")
                                 securitycompositeroles = ''.join(securitycompositeroles)
                             else:
                                 for role in compositeroles:
@@ -244,131 +252,112 @@ def add_directory_content(directory_id, level_id, hierarchy_id):
                                 glossary_hireachy=get_all_sub_directories(spm,glossary_info)
                                 
                                 #logger.debug(glossary_hireachy) #activelogger
+                                if len(glossary_hireachy) > 2:
+                                    if(len(glossary_hireachy[2]) > 0):
+                                        itsystem = glossary_hireachy[2].replace('&amp;', '&').strip()
+                                    else:
+                                        itsystem = ''
+                                else:
+                                    itsystem = '' 
+                                                               
+                                if len(glossary_hireachy) > 3:
+                                    if(len(glossary_hireachy[3]) > 0):
+                                        fiori = glossary_hireachy[3].replace('&amp;', '&').strip()
+                                    else:
+                                        fiori = ''   
+                                else:
+                                    fiori = ''
                                 
-                                
-                                if(glossary_hireachy):
-                                    #logger.debug(glossary_hireachy)
-                                    if len(glossary_hireachy) > 0:
-                                        if(len(glossary_hireachy[0]) > 0):
-                                            taxonomy = glossary_hireachy[0].replace('&amp;', '&').strip()
-                                        else:
-                                            taxonomy = ''
+                                if len(glossary_hireachy) > 4:
+                                    if(len(glossary_hireachy[4]) > 0):
+                                        l2 = glossary_hireachy[4].replace('&amp;', '&').strip()
                                     else:
-                                         taxonomy = ''    
+                                        l2 = ''   
+                                else:
+                                    l2 = ''
                                     
                                 
-                                    if len(glossary_hireachy) > 1:
-                                        if(len(glossary_hireachy[1]) > 0):
-                                            company = glossary_hireachy[1].replace('&amp;', '&').strip()
-                                        else:
-                                            company = ''
-                                    else:
-                                        company = ''  
-                                    
-                                    if len(glossary_hireachy) > 2:
-                                        if(len(glossary_hireachy[2]) > 0):
-                                            itsystem = glossary_hireachy[2].replace('&amp;', '&').strip()
-                                        else:
-                                            itsystem = ''
-                                    else:
-                                        itsystem = '' 
-                                                                   
-                                    if len(glossary_hireachy) > 3:
-                                        if(len(glossary_hireachy[3]) > 0):
-                                            fiori = glossary_hireachy[3].replace('&amp;', '&').strip()
-                                        else:
-                                            fiori = ''   
-                                    else:
-                                        fiori = ''
-                                    
-                                    if len(glossary_hireachy) > 4:
-                                        if(len(glossary_hireachy[4]) > 0):
-                                            l2 = glossary_hireachy[4].replace('&amp;', '&').strip()
-                                        else:
-                                            l2 = ''   
-                                    else:
-                                        l2 = ''
-                                        
-                                    
-                                                                        
-                                    if len(glossary_hireachy) > 5:
-                                         l1 = glossary_hireachy[5].replace('&amp;', '&').strip()
-                                    else:
-                                         l1 = ''
-                                    
-                                    if len(glossary_hireachy) > 6:
-                                          l0 = glossary_hireachy[6].replace('&amp;', '&').strip()
-                                    else:
-                                          l0 = ''     
-                                    
-                                    if len(glossary_hireachy) > 7:
-                                        workdayL0 = glossary_hireachy[7].replace('&amp;', '&').strip()
-                                    else:
-                                        workdayL0 = ''
-                                    
-                                    if len(glossary_hireachy) > 8:
-                                        if len(glossary_hireachy[8]) > 0:
-                                            description = glossary_hireachy[8].replace('&amp;', '&').strip()
-                                        else:
-                                            description = ''
+                                                                    
+                                if len(glossary_hireachy) > 5:
+                                     l1 = glossary_hireachy[5].replace('&amp;', '&').strip()
+                                else:
+                                     l1 = ''
+                                
+                                if len(glossary_hireachy) > 6:
+                                      l0 = glossary_hireachy[6].replace('&amp;', '&').strip()
+                                else:
+                                      l0 = ''     
+                                
+                                if len(glossary_hireachy) > 7:
+                                    workdayL0 = glossary_hireachy[7].replace('&amp;', '&').strip()
+                                else:
+                                    workdayL0 = ''
+                                
+                                if len(glossary_hireachy) > 8:
+                                    if len(glossary_hireachy[8]) > 0:
+                                        description = glossary_hireachy[8].replace('&amp;', '&').strip()
                                     else:
                                         description = ''
-                                        
-                                    if len(glossary_hireachy) > 9:    
-                                        capabilities = glossary_hireachy[9].replace('&amp;', '&').strip()
-                                    else:
-                                        capabilities = ''
+                                else:
+                                    description = ''
                                     
-                                    if len(glossary_hireachy) > 10:    
-                                        emParentDecomp = glossary_hireachy[10].replace('&amp;', '&').strip()
-                                    else:
-                                        emParentDecomp = ''
+                                if len(glossary_hireachy) > 9:    
+                                    capabilities = glossary_hireachy[9].replace('&amp;', '&').strip()
+                                else:
+                                    capabilities = ''
+                                
+                                if len(glossary_hireachy) > 10:    
+                                    emParentDecomp = glossary_hireachy[10].replace('&amp;', '&').strip()
+                                else:
+                                    emParentDecomp = ''
+                                
+                                if len(glossary_hireachy) > 11:    
+                                    emL1 = glossary_hireachy[11].replace('&amp;', '&').strip()
+                                else:
+                                    emL1 = ''
+                                
+                                if len(glossary_hireachy) > 12:    
+                                    emL0 = glossary_hireachy[12].replace('&amp;', '&').strip()
+                                else:
+                                    emL0 = ''
+                                
+                                if len(glossary_hireachy) > 13:    
+                                    l2_category = glossary_hireachy[13].replace('&amp;', '&').strip()
+                                else:
+                                    l2_category = ''
+                                
+                                if len(glossary_hireachy) > 14:    
+                                    l1_category = glossary_hireachy[14].replace('&amp;', '&').strip()
+                                else:
+                                    l1_category = ''
+                                
+                                if len(glossary_hireachy) > 15:    
+                                    l0_category = glossary_hireachy[15].replace('&amp;', '&').strip()
+                                else:
+                                    l0_category = ''
+                                
+                                if len(glossary_hireachy) > 16:    
+                                    l3_category = glossary_hireachy[16].replace('&amp;', '&').strip()
+                                else:
+                                    l3_category = ''
+                                
+                                if len(glossary_hireachy) > 17:    
+                                    programCategoryL2 = glossary_hireachy[17].replace('&amp;', '&').strip()
+                                else:
+                                    programCategoryL2 = ''
+                                
+                                if len(glossary_hireachy) > 18:    
+                                    programCategoryL1 = glossary_hireachy[18].replace('&amp;', '&').strip()
+                                else:
+                                    programCategoryL1 = ''
+                                if len(glossary_hireachy) > 19:    
+                                    programCategoryL0 = glossary_hireachy[19].replace('&amp;', '&').strip()
+                                else:
+                                    programCategoryL0 = ''
+                                
+                                #print(taxonomy, l2)
                                     
-                                    if len(glossary_hireachy) > 11:    
-                                        emL1 = glossary_hireachy[11].replace('&amp;', '&').strip()
-                                    else:
-                                        emL1 = ''
                                     
-                                    if len(glossary_hireachy) > 12:    
-                                        emL0 = glossary_hireachy[12].replace('&amp;', '&').strip()
-                                    else:
-                                        emL0 = ''
-                                    
-                                    if len(glossary_hireachy) > 13:    
-                                        l2_category = glossary_hireachy[13].replace('&amp;', '&').strip()
-                                    else:
-                                        l2_category = ''
-                                    
-                                    if len(glossary_hireachy) > 14:    
-                                        l1_category = glossary_hireachy[14].replace('&amp;', '&').strip()
-                                    else:
-                                        l1_category = ''
-                                    
-                                    if len(glossary_hireachy) > 15:    
-                                        l0_category = glossary_hireachy[15].replace('&amp;', '&').strip()
-                                    else:
-                                        l0_category = ''
-                                    
-                                    if len(glossary_hireachy) > 16:    
-                                        l3_category = glossary_hireachy[16].replace('&amp;', '&').strip()
-                                    else:
-                                        l3_category = ''
-                                    
-                                    if len(glossary_hireachy) > 17:    
-                                        programCategoryL2 = glossary_hireachy[17].replace('&amp;', '&').strip()
-                                    else:
-                                        programCategoryL2 = ''
-                                    
-                                    if len(glossary_hireachy) > 18:    
-                                        programCategoryL1 = glossary_hireachy[18].replace('&amp;', '&').strip()
-                                    else:
-                                        programCategoryL1 = ''
-                                    if len(glossary_hireachy) > 19:    
-                                        programCategoryL0 = glossary_hireachy[19].replace('&amp;', '&').strip()
-                                    else:
-                                        programCategoryL0 = ''
-                                    
-                                    #print(taxonomy, l2)
                             else:
                                 l4 = ''
                                 l3 = ''
@@ -405,160 +394,203 @@ def add_directory_content(directory_id, level_id, hierarchy_id):
                                                 #'Source Industry L3':subProcessTitle,
                                                 #'Industry Category L3': 'Sub-Process'})
                                 
-                            
-                            l4Tasks = filter_childshapes(model_json2, filter_list =['Task'])
-                            for index, l4Task in enumerate(l4Tasks):
-                                name = l4Task.get('properties',{}).get('name','')
-                                tasktype = l4Task.get('properties',{}).get('tasktype',{})
-                                
-                                #--Needs to be converted to a function accordingly----
-                                
-                                resource_id = l4Task.get('resourceId','')
-                                task_id = str(tmp_id) + str(index+1) + '.' 
-                                glossary_link=l4Task.get('glossaryLinks',{}).get('name','')
-                                if(glossary_link):
-                                    logger.debug('Glossary Link: ' + glossary_link[0]) #activelogger
-                                else:
-                                    logger.debug('No dictionary item') #activelogger
-                                glossary_results=''
-                                if(glossary_link):
-                                    glossary_link=glossary_link[0][1:]
-                                    glossary_info=glossary_link+'/info'
-                                    glossary_hireachy=get_all_sub_directories(spm,glossary_info)
+                            if model_json2:
+                                l4Tasks = filter_childshapes(model_json2, filter_list =['Task'])
+                            if l4Tasks:
+                                for index, l4Task in enumerate(l4Tasks):
+                                    name = l4Task.get('properties',{}).get('name','')
+                                    tasktype = l4Task.get('properties',{}).get('tasktype',{})
                                     
-                                    #logger.debug(glossary_hireachy) #activelogger
+                                    #--Needs to be converted to a function accordingly----
                                     
-                                    if len(glossary_hireachy) > 0:
-                                        if(len(glossary_hireachy[0]) > 0):
-                                            taskTaxonomy = glossary_hireachy[0].replace('&amp;', '&').strip()
+                                    resource_id = l4Task.get('resourceId','')
+                                    task_id = str(tmp_id) + str(index+1) + '.' 
+                                    glossary_link=l4Task.get('glossaryLinks',{}).get('name','')
+                                    if(glossary_link):
+                                        logger.debug('Glossary Link: ' + glossary_link[0]) #activelogger
+                                    else:
+                                        logger.debug('No dictionary item') #activelogger
+                                    glossary_results=''
+                                    if(glossary_link):
+                                        glossary_link=glossary_link[0][1:]
+                                        glossary_info=glossary_link+'/info'
+                                        glossary_hireachy=get_all_sub_directories(spm,glossary_info)
+                                        
+                                        logger.debug(f"Gloss Hierarchy:{glossary_hireachy}") #activelogger
+                                        
+                                        if len(glossary_hireachy) > 0:
+                                            if(len(glossary_hireachy[0]) > 0):
+                                                taskTaxonomy = glossary_hireachy[0].replace('&amp;', '&').strip()
+                                            else:
+                                                taskTaxonomy = ''
                                         else:
                                             taskTaxonomy = ''
-                                    else:
-                                        taskTaxonomy = ''
-                                        
-                                        
-                                    if len(glossary_hireachy) > 1:
-                                        if(len(glossary_hireachy[1]) > 0):
-                                            taskPractice = glossary_hireachy[1].replace('&amp;', '&').strip()
+                                            
+                                            
+                                        if len(glossary_hireachy) > 1:
+                                            if(len(glossary_hireachy[1]) > 0):
+                                                taskPractice = glossary_hireachy[1].replace('&amp;', '&').strip()
+                                            else:
+                                                taskPractice = ''
                                         else:
                                             taskPractice = ''
-                                    else:
-                                        taskPractice = ''
-                                        
-                                    if len(glossary_hireachy) > 4:
-                                        if(len(glossary_hireachy[4]) > 0):
-                                            taskL3 = glossary_hireachy[4].replace('&amp;', '&').strip()
+                                            
+                                        if len(glossary_hireachy) > 2:
+                                            if(len(glossary_hireachy[2]) > 0):
+                                                l4itsystem = glossary_hireachy[2].replace('&amp;', '&').strip()
+                                            else:
+                                                l4itsystem = ''
                                         else:
-                                            taskL3 = ''   
+                                            l4itsystem = '' 
+                                                                       
+                                        if len(glossary_hireachy) > 3:
+                                            if(len(glossary_hireachy[3]) > 0):
+                                                l4fiori = glossary_hireachy[3].replace('&amp;', '&').strip()
+                                            else:
+                                                l4fiori = ''   
+                                        else:
+                                            l4fiori = ''
+                                            
+                                        if len(glossary_hireachy) > 4:
+                                            if(len(glossary_hireachy[4]) > 0):
+                                                taskL3 = glossary_hireachy[4].replace('&amp;', '&').strip()
+                                                print(f"glosslev4: {taskL3}")
+                                            else:
+                                                taskL3 = ''   
+                                        else:
+                                            taskL3 = ''
+                                            
+                                        if len(glossary_hireachy) > 4:
+                                            if(len(glossary_hireachy[4]) > 0):
+                                                l2 = glossary_hireachy[4].replace('&amp;', '&').strip()
+                                            else:
+                                                l2 = ''   
+                                        else:
+                                            l2 = ''
+                                            
+                                                                            
+                                        if len(glossary_hireachy) > 5:
+                                             l1 = glossary_hireachy[5].replace('&amp;', '&').strip()
+                                        else:
+                                             l1 = ''
+                                        
+                                        if len(glossary_hireachy) > 6:
+                                              l0 = glossary_hireachy[6].replace('&amp;', '&').strip()
+                                        else:
+                                              l0 = ''
+                                        
+                                    #L4-> L3 tagging check
+                                        
+                                        if taskL3 == subProcessTitle:
+                                            l4_l3Check ='L3 dictionary Parent matching subprocess name'
+                                        else:
+                                            l4_l3Check = 'L3 dictionary Parent not matching subprocess name. L4 is currently linked to ' + l2 + ' as parent L3 instead of ' + subProcessTitle
+                                         
                                     else:
-                                        taskL3 = ''
-                                    
-                                #L4-> L3 tagging check
-                                    
-                                    if taskL3 == subProcessTitle:
-                                        l4_l3Check ='L3 dictionary Parent matching subprocess name'
+                                        l4 = name
+                                        l3 = subProcessTitle
+                                        l2 = 'No Dictionary item linked'
+                                        l2_category = ''
+                                        l3_category = ''
+                                        l1 = ''
+                                        l1_category = ''
+                                        l0 = ''
+                                        l0_category
+                                        workdayL0 = ''
+                                        description = ''
+                                        taskTaxonomy = ''
+                                        taxonomy = ''
+                                        taskPractice = ''
+                                        company = ''
+                                        itsystem = ''
+                                        fiori = ''
+                                        capabilities = ''
+                                        e2eScenarioOwner = ''
+                                        valueChainFunction = ''
+                                        emParentDecomp = ''
+                                        programCategoryL2 = ''
+                                        emL1 =''
+                                        programCategoryL1 = ''
+                                        emL0 = ''
+                                        programCategoryL0 = ''
+                                        
+                                    #logger.debug(task_id + name)
+                                    if (len(workdayL0)) > 0:
+                                        report_data.append({'ETE Group (Signavio Process Flow)': e2eName,
+                                                            'Source Industry L4':name,
+                                                            'Source Industry L3':l2,
+                                                            'Industry Category L3': l2_category,
+                                                            'Source Industry L2':l1,
+                                                            'Industry Category L2': l1_category,
+                                                            'Source Industry L1':l0,
+                                                            'Industry Category L1': l1_category,
+                                                            'Source Industry L0': workdayL0,
+                                                            'Industry Category L0': l0_category,
+                                                            'L3 Description': description,
+                                                            'Source Industry L4 Taxonomy': taskTaxonomy,
+                                                            'Source Industry L3 Taxonomy': taxonomy,
+                                                            'Source Industry L4 Practice': taskPractice,
+                                                            'Source Industry L3 Practice': company,
+                                                            'L3 IT System': itsystem,
+                                                            'L4 IT System': l4itsystem,
+                                                            'Fiori App/Transaction': fiori,
+                                                            'L4 Fiori App/Transaction': l4fiori,
+                                                            'EM Capabilities': capabilities,
+                                                            'E2E Scenario Owner': e2eScenarioOwner,
+                                                            'Value Chain Function': valueChainFunction,
+                                                            'Program L2': emParentDecomp,
+                                                            'Program Category L2': programCategoryL2,
+                                                            'Program L1': emL1,
+                                                            'Program Category L1': programCategoryL1,
+                                                            'Program L0': emL0,
+                                                            'Program Category L0': programCategoryL0,
+                                                            'Task Type':subprocesstasktype,
+                                                            'L4 Task Type':tasktype,
+                                                            'Composite Role':securitycompositeroles,
+                                                            'Signavio ID': resource_id,
+                                                            'Signavio Link': 'https://app-us.signavio.com/p/hub' + e2eLink,
+                                                            'Model Description':modelDescription,
+                                                            'L4->L3 Tagging Check':l4_l3Check}) 
                                     else:
-                                        l4_l3Check = 'L3 dictionary Parent not matching subprocess name. L4 is currently linked to ' + l2 + ' as parent L3 instead of ' + subProcessTitle
-                                     
-                                else:
-                                    l4 = name
-                                    l3 = subProcessTitle
-                                    l2 = 'No Dictionary item linked'
-                                    l2_category = ''
-                                    l3_category = ''
-                                    l1 = ''
-                                    l1_category = ''
-                                    l0 = ''
-                                    l0_category
-                                    workdayL0 = ''
-                                    description = ''
-                                    taskTaxonomy = ''
-                                    taxonomy = ''
-                                    taskPractice = ''
-                                    company = ''
-                                    itsystem = ''
-                                    fiori = ''
-                                    capabilities = ''
-                                    e2eScenarioOwner = ''
-                                    valueChainFunction = ''
-                                    emParentDecomp = ''
-                                    programCategoryL2 = ''
-                                    emL1 =''
-                                    programCategoryL1 = ''
-                                    emL0 = ''
-                                    programCategoryL0 = ''
+                                        report_data.append({'Process Area': directoryName,
+                                                            'ETE Group (Signavio Process Flow)': e2eName,
+                                                            'Source Industry L4': name,
+                                                            'Source Industry L3': subProcessTitle,
+                                                            'Industry Category L3': l3_category,
+                                                            'Source Industry L2':l2,
+                                                            'Industry Category L2':l2_category,
+                                                            'Source Industry L1':l1,
+                                                            'Industry Category L1': l1_category,
+                                                            'Source Industry L0':l0,
+                                                            'Industry Category L0': '',
+                                                            'L3 Description': description,
+                                                            'Source Industry L4 Taxonomy': taskTaxonomy,
+                                                            'Source Industry L3 Taxonomy': taxonomy,
+                                                            'Source Industry L4 Practice': taskPractice,
+                                                            'Source Industry L3 Practice': company,
+                                                            'IT System': itsystem,
+                                                            'L4 IT System': l4itsystem,
+                                                            'Fiori App/Transaction':fiori,
+                                                            'L4 Fiori App/Transaction': l4fiori,
+                                                            'EM Capabilities': capabilities,
+                                                            'E2E Scenario Owner': e2eScenarioOwner,
+                                                            'Value Chain Function': valueChainFunction,
+                                                            'Program L2': emParentDecomp,
+                                                            'Program Category L2': programCategoryL2,
+                                                            'Program L1': emL1,
+                                                            'Program Category L1': programCategoryL1,
+                                                            'Program L0': emL0,
+                                                            'Program Category L0': programCategoryL0,
+                                                            'Task Type':subprocesstasktype,
+                                                            'L4 Task Type':tasktype,
+                                                            'Composite Role':securitycompositeroles,
+                                                            'Signavio ID': resource_id,
+                                                            'Signavio Link': 'https://app-us.signavio.com/p/hub' + e2eLink,
+                                                            'Model Description':modelDescription,
+                                                            'L4->L3 Tagging Check':l4_l3Check})
+                            
+                                
                                     
-                                #logger.debug(task_id + name)
-                                if (len(workdayL0)) > 0:
-                                    report_data.append({'ETE Group (Signavio Process Flow)': e2eName,
-                                                        'Source Industry L4':name,
-                                                        'Source Industry L3':l2,
-                                                        'Industry Category L3': l2_category,
-                                                        'Source Industry L2':l1,
-                                                        'Industry Category L2': l1_category,
-                                                        'Source Industry L1':l0,
-                                                        'Industry Category L1': l1_category,
-                                                        'Source Industry L0': workdayL0,
-                                                        'Industry Category L0': l0_category,
-                                                        'Description': description,
-                                                        'Source Industry L4 Taxonomy': taskTaxonomy,
-                                                        'Source Industry L3 Taxonomy': taxonomy,
-                                                        'Source Industry L4 Practice': taskPractice,
-                                                        'Source Industry L3 Practice': company,
-                                                        'IT System': itsystem,
-                                                        'Fiori App/Transaction': fiori,
-                                                        'EM Capabilities': capabilities,
-                                                        'E2E Scenario Owner': e2eScenarioOwner,
-                                                        'Value Chain Function': valueChainFunction,
-                                                        'Program L2': emParentDecomp,
-                                                        'Program Category L2': programCategoryL2,
-                                                        'Program L1': emL1,
-                                                        'Program Category L1': programCategoryL1,
-                                                        'Program L0': emL0,
-                                                        'Program Category L0': programCategoryL0,
-                                                        'Task Type':subprocesstasktype,
-                                                        'L4 Task Type':tasktype,
-                                                        'Composite Role':securitycompositeroles,
-                                                        'Signavio ID': resource_id,
-                                                        'Signavio Link': 'https://app-us.signavio.com/p/hub' + e2eLink,
-                                                        'Model Description':modelDescription,
-                                                        'L4->L3 Tagging Check':l4_l3Check}) 
-                                else:
-                                    report_data.append({'ETE Group (Signavio Process Flow)': e2eName,
-                                                        'Source Industry L4': name,
-                                                        'Source Industry L3': subProcessTitle,
-                                                        'Industry Category L3': l3_category,
-                                                        'Source Industry L2':l2,
-                                                        'Industry Category L2':l2_category,
-                                                        'Source Industry L1':l1,
-                                                        'Industry Category L1': l1_category,
-                                                        'Source Industry L0':l0,
-                                                        'Industry Category L0': '',
-                                                        'Description': description,
-                                                        'Source Industry L4 Taxonomy': taskTaxonomy,
-                                                        'Source Industry L3 Taxonomy': taxonomy,
-                                                        'Source Industry L4 Practice': taskPractice,
-                                                        'Source Industry L3 Practice': company,
-                                                        'IT System': itsystem,
-                                                        'Fiori App/Transaction':fiori,
-                                                        'EM Capabilities': capabilities,
-                                                        'E2E Scenario Owner': e2eScenarioOwner,
-                                                        'Value Chain Function': valueChainFunction,
-                                                        'Program L2': emParentDecomp,
-                                                        'Program Category L2': programCategoryL2,
-                                                        'Program L1': emL1,
-                                                        'Program Category L1': programCategoryL1,
-                                                        'Program L0': emL0,
-                                                        'Program Category L0': programCategoryL0,
-                                                        'Task Type':subprocesstasktype,
-                                                        'L4 Task Type':tasktype,
-                                                        'Composite Role':securitycompositeroles,
-                                                        'Signavio ID': resource_id,
-                                                        'Signavio Link': 'https://app-us.signavio.com/p/hub' + e2eLink,
-                                                        'Model Description':modelDescription,
-                                                        'L4->L3 Tagging Check':l4_l3Check})
-                                
-                                
                                 
                         else:
                             
@@ -746,7 +778,8 @@ def add_directory_content(directory_id, level_id, hierarchy_id):
                                 
                             #logger.debug(task_id + name)
                             if (len(workdayL0)) > 0:
-                                report_data.append({'ETE Group (Signavio Process Flow)': e2eName,
+                                report_data.append({'Process Area': directoryName,
+                                                    'ETE Group (Signavio Process Flow)': e2eName,
                                                     'Source Industry L4':html.unescape(name),
                                                     'Source Industry L3':l2,
                                                     'Industry Category L3': l2_category,
@@ -762,7 +795,9 @@ def add_directory_content(directory_id, level_id, hierarchy_id):
                                                     'Source Industry L4 Practice': taskPractice,
                                                     'Source Industry L3 Practice': company,
                                                     'IT System': itsystem,
+                                                    'L4 IT System':'',
                                                     'Fiori App/Transaction': fiori,
+                                                    'L4 Fiori App/Transaction': '',
                                                     'EM Capabilities': capabilities,
                                                     'E2E Scenario Owner': e2eScenarioOwner,
                                                     'Value Chain Function': valueChainFunction,
@@ -780,7 +815,8 @@ def add_directory_content(directory_id, level_id, hierarchy_id):
                                                     'Model Description':modelDescription,
                                                     'L4->L3 Tagging Check':''}) 
                             else:
-                                report_data.append({'ETE Group (Signavio Process Flow)': e2eName,
+                                report_data.append({'Process Area': directoryName,
+                                                    'ETE Group (Signavio Process Flow)': e2eName,
                                                     'Source Industry L4': '',
                                                     'Source Industry L3': html.unescape(name),
                                                     'Industry Category L3': l3_category,
@@ -790,13 +826,15 @@ def add_directory_content(directory_id, level_id, hierarchy_id):
                                                     'Industry Category L1': l1_category,
                                                     'Source Industry L0':l0,
                                                     'Industry Category L0': l0_category,
-                                                    'Description': description,
+                                                    'L3 Description': description,
                                                     'Source Industry L4 Taxonomy': '',
                                                     'Source Industry L3 Taxonomy': taxonomy,
-                                                    'Source Industry L4 Practice': taskPractice,
+                                                    'Source Industry L4 Practice': '',
                                                     'Source Industry L3 Practice': company,
                                                     'IT System': itsystem,
+                                                    'L4 IT System':'',
                                                     'Fiori App/Transaction':fiori,
+                                                    'L4 Fiori App/Transaction': '',
                                                     'EM Capabilities': capabilities,
                                                     'E2E Scenario Owner': e2eScenarioOwner,
                                                     'Value Chain Function': valueChainFunction,
@@ -1358,8 +1396,9 @@ def add_directory_contentL3Only(directory_id, level_id, hierarchy_id):
 def get_all_sub_directories(spm, directoryID):
     try:
         directories = []
+        print(f"Directory ID: {directoryID}")
         directory = spm.get_endpoint(directoryID)    
-        #logger.debug(directory)
+        #logger.debug(f"Directory Details:{directory}")
         description = directory.get('description', {})
         #description = description.replace('&amp;', '&')
         if(len(description)==0):
